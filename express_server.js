@@ -48,6 +48,10 @@ app.get("/u/:shortURL", (req, res) => { //short Url with full url redirect
     res.sendStatus(404);
   }
 });
+app.get("/register", (req, res) => {
+  const  username = {username: req.cookies["username"]}; //object item username added to show in webpage
+  res.render("urls_registration", username);
+});
 // app.get("/set", (req, res) => {
 //   const a = 1;
 //   res.send(`a = ${a}`);
