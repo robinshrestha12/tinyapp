@@ -3,11 +3,31 @@ const app = express();
 const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser"); //make data readable by middleware body-parser
 const cookieParser = require('cookie-parser');
+const req = require("express/lib/request");
 app.set("view engine", "ejs");
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
+};
+const users = {
+  "userRandomID": {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur"
+  },
+  "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk"
+  }
+};
+const emailLookup = function(inputEmail) {//function to check if email already exists
+  for (let key in users)
+    if (users[key]["email"] === inputEmail.trim()) {
+      return true;
+    }
+  return false;
 };
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
@@ -29,15 +49,20 @@ app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 app.get("/urls", (req, res) => {
+  const userId = req.cookies["user_id"];
+  const user = users[userId];
   const templateVars = {urls: urlDatabase,
-    username: req.cookies["username"]}; //object item username added to show in webpage
+    user: user
+  }; //object item user added to show in webpage
   res.render("urls_index", templateVars);
 });
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new", {username: req.cookies["username"]}); //object passed while rendering to show
+  const userId = req.cookies["user_id"];
+  const user = users[userId];
+  res.render("urls_new", {user}); //object user is passed while rendering to show
 });
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user: users[req.cookies["user_id"]] };
   res.render("urls_show", templateVars);
 });
 app.get("/u/:shortURL", (req, res) => { //short Url with full url redirect
@@ -49,8 +74,8 @@ app.get("/u/:shortURL", (req, res) => { //short Url with full url redirect
   }
 });
 app.get("/register", (req, res) => {
-  const  username = {username: req.cookies["username"]}; //object item username added to show in webpage
-  res.render("urls_registration", username);
+  const templateVars = { user: null}; //user is set null when the registration page opens
+  res.render("urls_registration", templateVars);
 });
 // app.get("/set", (req, res) => {
 //   const a = 1;
@@ -82,8 +107,26 @@ app.post("/login",(req, res) => { //login part
   }
 });
 app.post("/logout",(req, res) => { //logout part
-  res.clearCookie('username'); //clearing cookie after logout
+  res.clearCookie('user_id'); //clearing cookie after logout
   res.redirect("/urls");
+});
+app.post("/register", (req, res) => {
+  const id = generateRandomString();
+  if (emailLookup(req.body.email) === false) { //if email is already there
+    if (req.body.email && req.body.password) {
+      users[id] = { // setting new user
+        id: id,
+        email: req.body.email,
+        password: req.body.password
+      };
+      res.cookie("user_id", id); //setting cookie
+      res.redirect("/urls");
+    } else {
+      res.sendStatus(400);
+    }
+  } else {
+    res.sendStatus(400);
+  }
 });
 
 app.listen(PORT, () => {
