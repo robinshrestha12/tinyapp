@@ -95,14 +95,7 @@ app.get("/login", (req, res) => {
   const templateVars = { user: null}; //user is set null when the registration page opens
   res.render("urls_login", templateVars);
 });
-// app.get("/set", (req, res) => {
-//   const a = 1;
-//   res.send(`a = ${a}`);
-// });
- 
-// app.get("/fetch", (req, res) => {
-//   res.send(`a = ${a}`);
-// });
+
 app.post("/urls", (req, res) => {
   const rndShort = generateRandomString(); //generating random alphaneumeric string
   urlDatabase[rndShort] =  req.body.longURL; //setting new long url with key
