@@ -77,6 +77,10 @@ app.get("/register", (req, res) => {
   const templateVars = { user: null}; //user is set null when the registration page opens
   res.render("urls_registration", templateVars);
 });
+app.get("/login", (req, res) => {
+  const templateVars = { user: null}; //user is set null when the registration page opens
+  res.render("urls_login", templateVars);
+});
 // app.get("/set", (req, res) => {
 //   const a = 1;
 //   res.send(`a = ${a}`);
