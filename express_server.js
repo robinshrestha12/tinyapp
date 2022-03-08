@@ -13,8 +13,8 @@ const urlDatabase = {
 const users = {
   "userRandomID": {
     id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    email: "user@x.com",
+    password: "123"
   },
   "user2RandomID": {
     id: "user2RandomID",
@@ -26,6 +26,20 @@ const emailLookup = function(inputEmail) {//function to check if email already e
   for (let key in users)
     if (users[key]["email"] === inputEmail.trim()) {
       return true;
+    }
+  return false;
+};
+const passwordLookup = function(inputPassword) {//function to check if email already exists
+  for (let key in users)
+    if (users[key]["password"] === inputPassword) {
+      return true;
+    }
+  return false;
+};
+const userIdLookup = function(inputEmail, inputPassword) {//function to check if email & password already exists
+  for (let key in users)
+    if (users[key]["email"] === inputEmail && users[key]["password"] === inputPassword) {
+      return users[key]["id"];
     }
   return false;
 };
@@ -104,9 +118,16 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect(`/urls/`); //redirecting to short URL
 });
 app.post("/login",(req, res) => { //login part
-  let userVar = req.body.username;
-  if (userVar) {
-    res.cookie('username', userVar); //saving username in cookie
+  let userEmail = req.body.email;
+  let userPassword = req.body.password;
+  if (emailLookup(userEmail) === false) {
+    res.sendStatus("403", 403);
+  }
+  if (passwordLookup(userPassword) === false) {
+    res.sendStatus("403", 403);
+  }
+  if (userIdLookup(userEmail, userPassword)) { //validating if email and password exists
+    res.cookie('user_id', userIdLookup(userEmail, userPassword)); //saving userid in cookie
     res.redirect("/urls");
   }
 });
