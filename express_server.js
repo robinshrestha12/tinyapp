@@ -6,9 +6,16 @@ const cookieParser = require('cookie-parser');
 const req = require("express/lib/request");
 app.set("view engine", "ejs");
 
-const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+
+const urlDatabase = { //database with userID
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW"
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW"
+  }
 };
 const users = {
   "userRandomID": {
@@ -43,6 +50,7 @@ const userIdLookup = function(inputEmail, inputPassword) {//function to check if
     }
   return false;
 };
+
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 const generateRandomString = function() { //random alphanumeric characeters generation
@@ -71,35 +79,39 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 app.get("/urls/new", (req, res) => {
+  if (!req.cookies["user_id"]) {
+    res.redirect("/login");
+    return;
+  }
   const userId = req.cookies["user_id"];
   const user = users[userId];
   res.render("urls_new", {user}); //object user is passed while rendering to show
 });
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user: users[req.cookies["user_id"]] };
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]["longURL"], user: users[req.cookies["user_id"]] };
   res.render("urls_show", templateVars);
 });
 app.get("/u/:shortURL", (req, res) => { //short Url with full url redirect
   if (urlDatabase[req.params.shortURL]) {
-    const fullLongURL = urlDatabase[req.params.shortURL];
+    const fullLongURL = urlDatabase[req.params.shortURL]["longURL"];
     res.redirect(fullLongURL);
   } else {
     res.sendStatus(404);
   }
 });
 app.get("/register", (req, res) => {
+  if (req.cookies["user_id"]) {
+    res.redirect("/urls");
+  }
   const templateVars = { user: null}; //user is set null when the registration page opens
   res.render("urls_registration", templateVars);
 });
 app.get("/login", (req, res) => {
+  if (req.cookies["user_id"]) {
+    res.redirect("/urls");
+  }
   const templateVars = { user: null}; //user is set null when the registration page opens
   res.render("urls_login", templateVars);
-});
-
-app.post("/urls", (req, res) => {
-  const rndShort = generateRandomString(); //generating random alphaneumeric string
-  urlDatabase[rndShort] =  req.body.longURL; //setting new long url with key
-  res.redirect(`/urls/${rndShort}`); //redirecting to short URL
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -107,17 +119,28 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect(`/urls/`); //redirecting to short URL
 });
 app.post("/urls/:shortURL", (req, res) => {
-  urlDatabase[req.params.shortURL] = req.body.newURL; //saving new value from edit
+  urlDatabase[req.params.shortURL]["longURL"] = req.body.newURL; //saving new value from edit
   res.redirect(`/urls/`); //redirecting to short URL
+});
+app.post("/urls", (req, res) => {
+  if (!req.cookies["user_id"]) {
+    console.log("You must be logged in to create a short URL");
+    res.redirect("/url");
+    return;
+  }
+  const rndShort = generateRandomString(); //generating random alphaneumeric string
+  urlDatabase[rndShort] =  { "longURL": req.body.longURL, "userID": req.cookies["user_id"]}; //setting new long url with key value
+  res.redirect(`/urls/${rndShort}`); //redirecting to short URL
 });
 app.post("/login",(req, res) => { //login part
   let userEmail = req.body.email;
   let userPassword = req.body.password;
   if (emailLookup(userEmail) === false) {
-    res.sendStatus("403", 403);
+    //res.sendStatus("403", 403);
+    return res.status(403).send("403: User does not exists.");
   }
   if (passwordLookup(userPassword) === false) {
-    res.sendStatus("403", 403);
+    return res.status(403).send("403: Password does not match.");
   }
   if (userIdLookup(userEmail, userPassword)) { //validating if email and password exists
     res.cookie('user_id', userIdLookup(userEmail, userPassword)); //saving userid in cookie
@@ -145,6 +168,7 @@ app.post("/register", (req, res) => {
   } else {
     res.sendStatus(400);
   }
+
 });
 
 app.listen(PORT, () => {
