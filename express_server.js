@@ -6,7 +6,6 @@ const cookieParser = require('cookie-parser');
 const req = require("express/lib/request");
 app.set("view engine", "ejs");
 
-
 const urlDatabase = { //database with userID
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
@@ -50,8 +49,16 @@ const userIdLookup = function(inputEmail, inputPassword) {//function to check if
     }
   return false;
 };
-
-app.use(bodyParser.urlencoded({extended: true}));
+const urlsForUser = function(id) {
+  let newUrlDatabase = {};
+  for (let key in urlDatabase) {
+    if (urlDatabase[key]["userID"] === id) {
+      newUrlDatabase[key] = urlDatabase[key];
+    }
+  }
+  return newUrlDatabase;
+};
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 const generateRandomString = function() { //random alphanumeric characeters generation
   let rndString = '';
@@ -71,21 +78,26 @@ app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 app.get("/urls", (req, res) => {
+  if (!req.cookies["user_id"]) { // if user is not logged in.
+    return res.status(403).send(`Please log in to view the list <a href="/login"> Go Login</a>`);
+  }
   const userId = req.cookies["user_id"];
   const user = users[userId];
-  const templateVars = {urls: urlDatabase,
+  const newUrlDatabase = urlsForUser(userId);
+  const templateVars = { //defining a new object
+    urls: newUrlDatabase,
     user: user
   }; //object item user added to show in webpage
   res.render("urls_index", templateVars);
 });
 app.get("/urls/new", (req, res) => {
-  if (!req.cookies["user_id"]) {
+  if (!req.cookies["user_id"]) { //if user is  not logged in
     res.redirect("/login");
     return;
   }
   const userId = req.cookies["user_id"];
   const user = users[userId];
-  res.render("urls_new", {user}); //object user is passed while rendering to show
+  res.render("urls_new", { user }); //object user is passed while rendering to show
 });
 app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]["longURL"], user: users[req.cookies["user_id"]] };
@@ -103,24 +115,52 @@ app.get("/register", (req, res) => {
   if (req.cookies["user_id"]) {
     res.redirect("/urls");
   }
-  const templateVars = { user: null}; //user is set null when the registration page opens
+  const templateVars = { user: null }; //user is set null when the registration page opens
   res.render("urls_registration", templateVars);
 });
 app.get("/login", (req, res) => {
   if (req.cookies["user_id"]) {
     res.redirect("/urls");
   }
-  const templateVars = { user: null}; //user is set null when the registration page opens
+  const templateVars = { user: null }; //user is set null when the registration page opens
   res.render("urls_login", templateVars);
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  delete urlDatabase[req.params.shortURL]; //deleting the url database.
-  res.redirect(`/urls/`); //redirecting to short URL
+  if (urlDatabase[req.params.shortURL]) { //if shortURL object is present
+    if (users[req.cookies["user_id"]]) { //if user is logged in
+      const shortUrlData = urlDatabase[req.params.shortURL];
+      if (shortUrlData["userID"] === req.cookies["user_id"]) { //if userid matches with the id of database object
+        delete urlDatabase[req.params.shortURL]; //deleting the url database.
+        res.redirect(`/urls/`); //redirecting to short URL
+      } else {
+        res.status(403).send(`403: You do not have access to delete this URL .`);
+      }
+    } else {
+      res.status(403).send(`403: Please log in to delete URL. <a href="/login"> Go to Login Page</a> `);
+    }
+  } else {
+    res.status(403).send(`403: No url in the db please check, <a href="/login"> Go to Login Page</a>`);
+  }
 });
 app.post("/urls/:shortURL", (req, res) => {
-  urlDatabase[req.params.shortURL]["longURL"] = req.body.newURL; //saving new value from edit
-  res.redirect(`/urls/`); //redirecting to short URL
+  if (urlDatabase[req.params.shortURL]) { //if shortURL object is present
+    console.log(urlDatabase[req.params.shortURL]);
+    if (users[req.cookies["user_id"]]) { //if user is logged in
+      const shortUrlData = urlDatabase[req.params.shortURL];
+      if (shortUrlData["userID"] === req.cookies["user_id"]) { //if userid matches with the id of database object
+        urlDatabase[req.params.shortURL]["longURL"] = req.body.newURL;
+        console.log(urlDatabase);//saving new value from edit
+        res.redirect(`/urls/`); //redirecting to short URL
+      } else {
+        res.status(403).send(`403: You do not have access to edit this URL. `);
+      }
+    } else {
+      res.status(403).send(`403: Please log in to edit URL.<a href="/login"> Go to Login Page</a> `);
+    }
+  } else {
+    res.status(403).send(`403: No url in the db please check, <a href="/login"> Go to Login Page</a>`);
+  }
 });
 app.post("/urls", (req, res) => {
   if (!req.cookies["user_id"]) {
@@ -129,14 +169,13 @@ app.post("/urls", (req, res) => {
     return;
   }
   const rndShort = generateRandomString(); //generating random alphaneumeric string
-  urlDatabase[rndShort] =  { "longURL": req.body.longURL, "userID": req.cookies["user_id"]}; //setting new long url with key value
+  urlDatabase[rndShort] = { "longURL": req.body.longURL, "userID": req.cookies["user_id"] }; //setting new long url with key value
   res.redirect(`/urls/${rndShort}`); //redirecting to short URL
 });
-app.post("/login",(req, res) => { //login part
+app.post("/login", (req, res) => { //login part
   let userEmail = req.body.email;
   let userPassword = req.body.password;
   if (emailLookup(userEmail) === false) {
-    //res.sendStatus("403", 403);
     return res.status(403).send("403: User does not exists.");
   }
   if (passwordLookup(userPassword) === false) {
@@ -147,7 +186,7 @@ app.post("/login",(req, res) => { //login part
     res.redirect("/urls");
   }
 });
-app.post("/logout",(req, res) => { //logout part
+app.post("/logout", (req, res) => { //logout part
   res.clearCookie('user_id'); //clearing cookie after logout
   res.redirect("/urls");
 });
@@ -168,7 +207,6 @@ app.post("/register", (req, res) => {
   } else {
     res.sendStatus(400);
   }
-
 });
 
 app.listen(PORT, () => {
