@@ -37,25 +37,27 @@ const users = {
     password: "dishwasher-funk"
   }
 };
-const emailLookup = function(inputEmail) {//function to check if email already exists
-  for (let key in users)
-    if (users[key]["email"] === inputEmail.trim()) {
+
+const getUserByemail = function(inputEmail, inputDatabase) {//function to check if email already exists
+  for (let key in inputDatabase) {
+    if (inputDatabase[key]["email"] === inputEmail) {
       console.log(inputEmail.trim());
-      return true;
-    }
-  return false;
-};
-const getUser = function(email, password) { //function to get user object through email and password
-  for (const key in users) {
-    if (bcrypt.compareSync(password, users[key]["password"])) { //bcrypt password comparison
-      if (users[key]["email"] === email) {
-        console.log(users[key]);
-        return users[key];
-      }
+      return inputDatabase[key];
     }
   }
-  return undefined;
+  return null;
 };
+
+// const getUser = function(email, password) { //function to get user object through email and password
+//   for (const key in users) {
+//     if (users[key]["email"] === email) {
+//       if (bcrypt.compareSync(password, users[key]["password"])) { //bcrypt password comparison
+//         return users[key];
+//       }
+//     }
+//   }
+//   return null;
+// };
 
 const urlsForUser = function(id) { //function getting new object having same ids
   let newUrlDatabase = {};
@@ -93,7 +95,7 @@ app.get("/urls", (req, res) => {
   const newUrlDatabase = urlsForUser(userId);
   const templateVars = { //defining a new object
     urls: newUrlDatabase,
-    user: user
+    user: userId ? user : null,
   }; //object item user added to show in webpage
   res.render("urls_index", templateVars);
 });
@@ -126,8 +128,9 @@ app.get("/register", (req, res) => {
   res.render("urls_registration", templateVars);
 });
 app.get("/login", (req, res) => {
+
   if (req.session["user_id"]) {
-    res.redirect("/urls");
+    return res.redirect("/urls");
   }
   const templateVars = { user: null }; //user is set null when the registration page opens
   res.render("urls_login", templateVars);
@@ -152,12 +155,10 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 app.post("/urls/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL]) { //if shortURL object is present
-    console.log(urlDatabase[req.params.shortURL]);
     if (users[req.session["user_id"]]) { //if user is logged in
       const shortUrlData = urlDatabase[req.params.shortURL];
       if (shortUrlData["userID"] === req.session["user_id"]) { //if userid matches with the id of database object
         urlDatabase[req.params.shortURL]["longURL"] = req.body.newURL;
-        console.log(urlDatabase);//saving new value from edit
         res.redirect(`/urls/`); //redirecting to short URL
       } else {
         res.status(403).send(`403: You do not have access to edit this URL. `);
@@ -182,23 +183,17 @@ app.post("/urls", (req, res) => {
 app.post("/login", (req, res) => { //login part
   let userEmail = req.body.email;
   let userPassword = req.body.password;
-  if (emailLookup(userEmail) === true) { //return user or undefined.
-    const user = getUser(userEmail, userPassword);
-    if (user !== undefined) {
-      const dataPassword = user["password"];
-      if (bcrypt.compareSync(userPassword, dataPassword)) {
-        req.session['user_id'] = user.id; //saving userid in cookie
-        res.redirect("/urls");
-      } else {
-        return res.status(403).send("403: Password does not match.");
-      }
+  const user = getUserByemail(userEmail, users);
+  if (user) { //return user or undefined.
+    if (bcrypt.compareSync(userPassword, user.password)) {
+      req.session['user_id'] = user.id; //saving userid in cookie
+      res.redirect("/urls");
     } else {
       return res.status(403).send("403: Password does not match.");
     }
   } else {
     return res.status(403).send("403: User email does not exists.");
   }
-
 });
 app.post("/logout", (req, res) => { //logout part
   req.session = null; //clearing cookie session after logout
@@ -206,7 +201,7 @@ app.post("/logout", (req, res) => { //logout part
 });
 app.post("/register", (req, res) => {
   const id = generateRandomString();
-  if (emailLookup(req.body.email) === false) { //if email is already there
+  if (!getUserByemail(req.body.email, users)) { //if email is already there
     if (req.body.email && req.body.password) {
       const password = req.body.password;
       const hashedPassword = bcrypt.hashSync(password, 10);
