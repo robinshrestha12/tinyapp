@@ -4,6 +4,8 @@ const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser"); //make data readable by middleware body-parser
 const cookieParser = require('cookie-parser');
 const req = require("express/lib/request");
+const bcrypt = require('bcryptjs');
+
 app.set("view engine", "ejs");
 
 const urlDatabase = { //database with userID
@@ -31,24 +33,23 @@ const users = {
 const emailLookup = function(inputEmail) {//function to check if email already exists
   for (let key in users)
     if (users[key]["email"] === inputEmail.trim()) {
+      console.log(inputEmail.trim());
       return true;
     }
   return false;
 };
-const passwordLookup = function(inputPassword) {//function to check if email already exists
-  for (let key in users)
-    if (users[key]["password"] === inputPassword) {
-      return true;
+const getUser = function(email, password) {
+  for (const key in users) {
+    if (bcrypt.compareSync(password, users[key]["password"])) {
+      if (users[key]["email"] === email) {
+        console.log(users[key]);
+        return users[key];
+      }
     }
-  return false;
+  }
+  return undefined;
 };
-const userIdLookup = function(inputEmail, inputPassword) {//function to check if email & password already exists
-  for (let key in users)
-    if (users[key]["email"] === inputEmail && users[key]["password"] === inputPassword) {
-      return users[key]["id"];
-    }
-  return false;
-};
+
 const urlsForUser = function(id) {
   let newUrlDatabase = {};
   for (let key in urlDatabase) {
@@ -175,16 +176,23 @@ app.post("/urls", (req, res) => {
 app.post("/login", (req, res) => { //login part
   let userEmail = req.body.email;
   let userPassword = req.body.password;
-  if (emailLookup(userEmail) === false) {
-    return res.status(403).send("403: User does not exists.");
+  if (emailLookup(userEmail) === true) { //return user or undefined.
+    const user = getUser(userEmail, userPassword);
+    if (user !== undefined) {
+      const dataPassword = user["password"];
+      if (bcrypt.compareSync(userPassword, dataPassword)) {
+        res.cookie('user_id', user.id); //saving userid in cookie
+        res.redirect("/urls");
+      } else {
+        return res.status(403).send("403: Password does not match.");
+      }
+    } else {
+      return res.status(403).send("403: Password does not match.");
+    }
+  } else {
+    return res.status(403).send("403: User email does not exists.");
   }
-  if (passwordLookup(userPassword) === false) {
-    return res.status(403).send("403: Password does not match.");
-  }
-  if (userIdLookup(userEmail, userPassword)) { //validating if email and password exists
-    res.cookie('user_id', userIdLookup(userEmail, userPassword)); //saving userid in cookie
-    res.redirect("/urls");
-  }
+
 });
 app.post("/logout", (req, res) => { //logout part
   res.clearCookie('user_id'); //clearing cookie after logout
@@ -194,10 +202,12 @@ app.post("/register", (req, res) => {
   const id = generateRandomString();
   if (emailLookup(req.body.email) === false) { //if email is already there
     if (req.body.email && req.body.password) {
+      const password = req.body.password;
+      const hashedPassword = bcrypt.hashSync(password, 10);
       users[id] = { // setting new user
         id: id,
         email: req.body.email,
-        password: req.body.password
+        password: hashedPassword
       };
       res.cookie("user_id", id); //setting cookie
       res.redirect("/urls");
