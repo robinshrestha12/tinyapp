@@ -5,7 +5,7 @@ const bodyParser = require("body-parser"); //make data readable by middleware bo
 const req = require("express/lib/request");
 const bcrypt = require('bcryptjs');
 const cookieSession = require('cookie-session');
-const {getUserByemail, urlsForUser} = require("./helper");
+const {getUserByEmail, urlsForUser} = require("./helper");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieSession({
@@ -153,10 +153,10 @@ app.post("/urls", (req, res) => {
 app.post("/login", (req, res) => { //login part
   let userEmail = req.body.email;
   let userPassword = req.body.password;
-  const user = getUserByemail(userEmail, users);
-  if (user) { //return user or undefined.
-    if (bcrypt.compareSync(userPassword, user.password)) {
-      req.session['user_id'] = user.id; //saving userid in cookie
+  const userID = getUserByEmail(userEmail, users);
+  if (userID) { //return user or undefined.
+    if (bcrypt.compareSync(userPassword, users[userID].password)) {
+      req.session['user_id'] = userID; //saving userid in cookie
       res.redirect("/urls");
     } else {
       return res.status(403).send("403: Password does not match.");
@@ -171,7 +171,7 @@ app.post("/logout", (req, res) => { //logout part
 });
 app.post("/register", (req, res) => {
   const id = generateRandomString();
-  if (!getUserByemail(req.body.email, users)) { //if email is already there
+  if (!getUserByEmail(req.body.email, users)) { //if id is already there
     if (req.body.email && req.body.password) {
       const password = req.body.password;
       const hashedPassword = bcrypt.hashSync(password, 10);

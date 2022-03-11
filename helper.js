@@ -1,8 +1,9 @@
 
-const getUserByemail = function(inputEmail, inputDatabase) {//function to get user object by email
+const getUserByEmail = function(inputEmail, inputDatabase) {//function to get user object by email
   for (let key in inputDatabase) {
     if (inputDatabase[key]["email"] === inputEmail) {
-      return inputDatabase[key];
+      //return inputDatabase[key];
+      return key;
     }
   }
   return null;
@@ -17,4 +18,4 @@ const urlsForUser = function(id, urlDatabase) { //function getting new object ha
   return newUrlDatabase;
 };
 
-module.exports = { getUserByemail, urlsForUser };
+module.exports = { getUserByEmail, urlsForUser };
