@@ -5,6 +5,7 @@ const bodyParser = require("body-parser"); //make data readable by middleware bo
 const req = require("express/lib/request");
 const bcrypt = require('bcryptjs');
 const cookieSession = require('cookie-session');
+const {getUserByemail, urlsForUser} = require("./helper");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieSession({
@@ -38,37 +39,6 @@ const users = {
   }
 };
 
-const getUserByemail = function(inputEmail, inputDatabase) {//function to check if email already exists
-  for (let key in inputDatabase) {
-    if (inputDatabase[key]["email"] === inputEmail) {
-      console.log(inputEmail.trim());
-      return inputDatabase[key];
-    }
-  }
-  return null;
-};
-
-// const getUser = function(email, password) { //function to get user object through email and password
-//   for (const key in users) {
-//     if (users[key]["email"] === email) {
-//       if (bcrypt.compareSync(password, users[key]["password"])) { //bcrypt password comparison
-//         return users[key];
-//       }
-//     }
-//   }
-//   return null;
-// };
-
-const urlsForUser = function(id) { //function getting new object having same ids
-  let newUrlDatabase = {};
-  for (let key in urlDatabase) {
-    if (urlDatabase[key]["userID"] === id) {
-      newUrlDatabase[key] = urlDatabase[key];
-    }
-  }
-  return newUrlDatabase;
-};
-
 const generateRandomString = function() { //random alphanumeric characeters generation
   let rndString = '';
   let gvnStrng = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -92,7 +62,7 @@ app.get("/urls", (req, res) => {
   }
   const userId = req.session["user_id"];
   const user = users[userId];
-  const newUrlDatabase = urlsForUser(userId);
+  const newUrlDatabase = urlsForUser(userId, urlDatabase);
   const templateVars = { //defining a new object
     urls: newUrlDatabase,
     user: userId ? user : null,
