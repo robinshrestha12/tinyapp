@@ -79,6 +79,9 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", { user }); //object user is passed while rendering to show
 });
 app.get("/urls/:shortURL", (req, res) => {
+  if (!urlDatabase[req.params.shortURL]) {
+    return res.status(403).send(`403: That URL not present, please login to view URL. <a href="/login"> Go to Login Page</a> `);
+  }
   const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]["longURL"], user: users[req.session["user_id"]] };
   res.render("urls_show", templateVars);
 });
@@ -142,9 +145,7 @@ app.post("/urls/:shortURL", (req, res) => {
 });
 app.post("/urls", (req, res) => {
   if (!req.session["user_id"]) {
-    console.log("You must be logged in to create a short URL");
-    res.redirect("/url");
-    return;
+    return res.status(403).send(`You must be logged in to create a short URL, <a href="/login"> Go to Login Page</a>`);
   }
   const rndShort = generateRandomString(); //generating random alphaneumeric string
   urlDatabase[rndShort] = { "longURL": req.body.longURL, "userID": req.session["user_id"] }; //setting new long url with key value
@@ -159,10 +160,10 @@ app.post("/login", (req, res) => { //login part
       req.session['user_id'] = userID; //saving userid in cookie
       res.redirect("/urls");
     } else {
-      return res.status(403).send("403: Password does not match.");
+      return res.status(403).send(`403: Password does not match.<a href="/login"> Go to Login Page</a>`);
     }
   } else {
-    return res.status(403).send("403: User email does not exists.");
+    return res.status(403).send(`403: User email does not exists. <a href="/login"> Go to Login Page</a>`);
   }
 });
 app.post("/logout", (req, res) => { //logout part
@@ -183,13 +184,12 @@ app.post("/register", (req, res) => {
       req.session["user_id"] = id; //setting cookie
       res.redirect("/urls");
     } else {
-      res.sendStatus(400);
+      res.status(400).send(`Email and Password cannot be empty <a href="/register"> Go to Register Page</a > `);
     }
   } else {
     res.sendStatus(400);
   }
 });
-
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });

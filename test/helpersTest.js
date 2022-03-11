@@ -1,7 +1,7 @@
-const { assert } = require('chai'); 
+const { assert } = require('chai');
 const { getUserByEmail, urlsForUser } = require("../helper"); //importing the functions
 
-const testUsers = {  
+const testUsers = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
@@ -34,7 +34,6 @@ describe('getUserByEmail', function() {
     const expectedUserID = "user2RandomID";
     assert.equal(user, expectedUserID);
   });
-
 });
 describe('urlsForUser', function() {
   it('should return an object with valid id "aJ48lW"', function() {
