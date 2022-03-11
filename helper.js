@@ -2,7 +2,6 @@
 const getUserByEmail = function(inputEmail, inputDatabase) {//function to get user object by email
   for (let key in inputDatabase) {
     if (inputDatabase[key]["email"] === inputEmail) {
-      //return inputDatabase[key];
       return key;
     }
   }

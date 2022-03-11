@@ -26,7 +26,7 @@ const urlDatabase = { //database with userID
     userID: "aJ48lW"
   }
 };
-const users = {
+const users = { // users database template
   "userRandomID": {
     id: "userRandomID",
     email: "user@x.com",
@@ -79,7 +79,7 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", { user }); //object user is passed while rendering to show
 });
 app.get("/urls/:shortURL", (req, res) => {
-  if (!urlDatabase[req.params.shortURL]) {
+  if (!urlDatabase[req.params.shortURL]) { //if the shortURL is not in database
     return res.status(403).send(`403: That URL not present, please login to view URL. <a href="/login"> Go to Login Page</a> `);
   }
   const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]["longURL"], user: users[req.session["user_id"]] };
@@ -94,14 +94,13 @@ app.get("/u/:shortURL", (req, res) => { //short Url with full url redirect
   }
 });
 app.get("/register", (req, res) => {
-  if (req.session["user_id"]) {
-    res.redirect("/urls");
+  if (req.session["user_id"]) { //if user is already logged in
+    return res.redirect("/urls");
   }
   const templateVars = { user: null }; //user is set null when the registration page opens
   res.render("urls_registration", templateVars);
 });
 app.get("/login", (req, res) => {
-
   if (req.session["user_id"]) {
     return res.redirect("/urls");
   }
@@ -184,10 +183,10 @@ app.post("/register", (req, res) => {
       req.session["user_id"] = id; //setting cookie
       res.redirect("/urls");
     } else {
-      res.status(400).send(`Email and Password cannot be empty <a href="/register"> Go to Register Page</a > `);
+      res.status(400).send(`Error: 400, Email and Password can not be empty <a href="/register"> Go to Register Page</a > `);
     }
   } else {
-    res.sendStatus(400);
+    res.status(400).send(`Error: 400, Email already exists,<a href="/register"> Go to Register Page</a >  `);
   }
 });
 app.listen(PORT, () => {
