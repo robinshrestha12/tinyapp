@@ -47,8 +47,8 @@ const generateRandomString = function() { //random alphanumeric characeters gene
   }
   return rndString;
 };
-app.get("/", (req, res) => {
-  res.send("Hello!");
+app.get("/", (req, res) => {//redirecting home page to login
+  res.redirect("/login");
 });
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
